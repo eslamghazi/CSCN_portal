@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environment
+venv/
+venv32/
+.venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.spec.bak
+
+# Data & runtime (keep folder structure via .gitkeep, ignore contents)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/logs/
+data/uploads/
+data/exports/
+data/reports/
+data/backups/
+
+# Environment / secrets
+# .env
+
+# IDE
+.vscode/
+.idea/
+*.swp
