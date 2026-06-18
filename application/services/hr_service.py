@@ -141,6 +141,23 @@ class HRService:
             module="hr", action=action, entity_type=model.__name__, entity_id=entity_id)
         return True
 
+    def _update(self, model, entity_id: int, fields: dict, action: str):
+        session = self._session
+        obj = session.get(model, entity_id)
+        if not obj:
+            return None
+        try:
+            for key, value in fields.items():
+                setattr(obj, key, value)
+            session.commit()
+            session.refresh(obj)
+        except Exception:
+            session.rollback()
+            raise
+        self.audit_service.log_action(
+            module="hr", action=action, entity_type=model.__name__, entity_id=entity_id)
+        return obj
+
     # ------------------------------------------------------- qualifications
     def get_qualifications(self, employee_id: int) -> List[Qualification]:
         return (self._session.query(Qualification)
@@ -152,6 +169,13 @@ class HRService:
             Qualification(employee_id=employee_id, degree=degree,
                           institution=institution, year_obtained=year_obtained),
             "add_qualification", "Qualification")
+
+    def update_qualification(self, qualification_id: int, degree: str, institution: str,
+                             year_obtained: Optional[int] = None):
+        return self._update(
+            Qualification, qualification_id,
+            {"degree": degree, "institution": institution, "year_obtained": year_obtained},
+            "update_qualification")
 
     def delete_qualification(self, qualification_id: int) -> bool:
         return self._delete(Qualification, qualification_id, "delete_qualification")
@@ -171,6 +195,16 @@ class HRService:
                              end_date=end_date, description=description),
             "add_experience", "ExperienceRecord")
 
+    def update_experience(self, experience_id: int, job_title: str, company: str,
+                          start_date: Optional[date] = None,
+                          end_date: Optional[date] = None,
+                          description: Optional[str] = None):
+        return self._update(
+            ExperienceRecord, experience_id,
+            {"job_title": job_title, "company": company, "start_date": start_date,
+             "end_date": end_date, "description": description},
+            "update_experience")
+
     def delete_experience(self, experience_id: int) -> bool:
         return self._delete(ExperienceRecord, experience_id, "delete_experience")
 
@@ -186,6 +220,14 @@ class HRService:
             EmployeeEvaluation(employee_id=employee_id, evaluation_date=evaluation_date,
                                score=score, notes=notes),
             "add_evaluation", "EmployeeEvaluation")
+
+    def update_evaluation(self, evaluation_id: int, evaluation_date: date,
+                          score: Optional[float] = None,
+                          notes: Optional[str] = None):
+        return self._update(
+            EmployeeEvaluation, evaluation_id,
+            {"evaluation_date": evaluation_date, "score": score, "notes": notes},
+            "update_evaluation")
 
     def delete_evaluation(self, evaluation_id: int) -> bool:
         return self._delete(EmployeeEvaluation, evaluation_id, "delete_evaluation")

@@ -15,15 +15,16 @@ _ICON_ONLY_FILL = {
 
 
 def _icon_only_css(variant: str) -> str:
-    """A soft, rounded, tinted square button for table row actions (cleaner than
-    a heavy solid fill; the icon keeps its accent colour, hover shows a ring)."""
-    bg, _fg = _ICON_ONLY_FILL.get(variant, _ICON_ONLY_FILL["secondary"])
-    ring = Colors.DANGER if variant == "danger" else Colors.PRIMARY
-    border = Colors.BORDER_STRONG if variant == "secondary" else "transparent"
+    """A clean square button for table row actions: a high-contrast accent icon on
+    a white surface with a subtle border, filling with the soft tint on hover.
+    (A tinted icon on a tinted fill was too low-contrast to read.)"""
+    soft, _icon = _ICON_ONLY_FILL.get(variant, _ICON_ONLY_FILL["secondary"])
+    accent = Colors.DANGER if variant == "danger" else Colors.PRIMARY
     return (
-        f"QPushButton {{ background-color: {bg}; border: 1px solid {border}; "
+        f"QPushButton {{ background-color: {Colors.SURFACE}; "
+        f"border: 1px solid {Colors.BORDER_STRONG}; "
         f"border-radius: {Radius.SM}px; padding: 6px; }}"
-        f"QPushButton:hover {{ border: 1px solid {ring}; }}"
+        f"QPushButton:hover {{ background-color: {soft}; border: 1px solid {accent}; }}"
     )
 
 
@@ -88,6 +89,6 @@ class IconButton(QPushButton):
             else:
                 color = Colors.PRIMARY
             self.setIcon(icon(icon_name, color=color))
-            self.setIconSize(QSize(16, 16))
+            self.setIconSize(QSize(18, 18) if icon_only else QSize(16, 16))
         if icon_only:
-            self.setFixedSize(QSize(34, 32))
+            self.setFixedSize(QSize(36, 32))
