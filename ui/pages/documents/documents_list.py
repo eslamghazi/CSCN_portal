@@ -47,6 +47,8 @@ class DocumentsListView(QWidget):
             "تاريخ السريان", "الحالة", "إجراءات",
         ]
         self.table = DataTable(columns)
+        self.table.refresh_requested.connect(self.load_data)
+        self.table.set_export_title("الوثائق")
         self.table.add_filter("الحالة", [("معتمد", "approved"), ("مسودة", "draft")])
         card.add(self.table)
         main_layout.addWidget(card)

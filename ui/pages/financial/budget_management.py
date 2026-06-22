@@ -178,6 +178,8 @@ class BudgetManagementView(QWidget):
 
         self.table = DataTable(
             ["البند", "المخصّص", "المستهلَك", "المتاح", "إجراءات"])
+        self.table.refresh_requested.connect(self.reload_items)
+        self.table.set_export_title("بنود الميزانية")
         card.add(self.table)
         main_layout.addWidget(card)
 

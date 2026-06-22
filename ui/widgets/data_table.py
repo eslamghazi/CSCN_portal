@@ -1,17 +1,20 @@
 import math
+from datetime import datetime
 from typing import List
 
 from qtpy.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
-    QTableWidgetItem, QHeaderView, QLabel, QLineEdit, QComboBox
+    QTableWidgetItem, QHeaderView, QLabel, QLineEdit, QComboBox, QFileDialog
 )
 from qtpy.QtCore import Qt, Signal, QSize
+from loguru import logger
 
 from ui.themes.colors import Colors
 from ui.themes.icons import icon
 from ui.widgets.status_badge import StatusBadge
 from ui.widgets.icon_button import IconButton
 from ui.widgets.cell import cell_widget
+from ui.widgets.toast import Toast
 
 
 class Badge:
@@ -70,6 +73,7 @@ class DataTable(QWidget):
     page_changed = Signal(int)        # kept for backward compatibility
     search_requested = Signal(str)    # kept for backward compatibility
     row_action_requested = Signal(int, str)
+    refresh_requested = Signal()      # the toolbar "تحديث" button
 
     def __init__(self, columns: List[str], page_size: int = 25):
         super().__init__()
@@ -81,6 +85,10 @@ class DataTable(QWidget):
         self._sort_desc = False
         self._page = 1
         self._page_size = page_size
+        self.export_title = "بيانات"
+        self._import_columns = None
+        self._on_import_row = None
+        self._import_sample = None
         self.setup_ui()
 
     # ------------------------------------------------------------------ UI
@@ -102,6 +110,20 @@ class DataTable(QWidget):
         self.search_input.textChanged.connect(self._on_search_changed)
         self.toolbar.addWidget(self.search_input)
         self.toolbar.addStretch()
+
+        # Tools (right side): import + template (shown when enabled), export, refresh.
+        self.import_btn = IconButton("استيراد", "upload", variant="secondary", compact=True)
+        self.import_btn.clicked.connect(self._on_import)
+        self.import_btn.hide()
+        self.template_btn = IconButton("قالب Excel", "browse", variant="secondary", compact=True)
+        self.template_btn.clicked.connect(self._on_template)
+        self.template_btn.hide()
+        self.export_btn = IconButton("تصدير", "export", variant="secondary", compact=True)
+        self.export_btn.clicked.connect(self._on_export)
+        self.refresh_btn = IconButton("تحديث", "refresh", variant="secondary", compact=True)
+        self.refresh_btn.clicked.connect(self.refresh_requested.emit)
+        for b in (self.import_btn, self.template_btn, self.export_btn, self.refresh_btn):
+            self.toolbar.addWidget(b)
         layout.addLayout(self.toolbar)
 
         self.table = QTableWidget()
@@ -284,3 +306,130 @@ class DataTable(QWidget):
     def next_page(self):
         self._page += 1
         self._render()
+
+    # --------------------------------------------------------- export/import
+    def set_export_title(self, title: str):
+        """Name used for the exported file and report heading."""
+        self.export_title = title or "بيانات"
+
+    def enable_import(self, columns: list, on_import_row, sample_row=None):
+        """Turn on the Import + Template buttons. `columns` are the template
+        headers; `on_import_row({header: value})` creates one record per data
+        row; `sample_row` is an optional example row written into the template."""
+        self._import_columns = list(columns)
+        self._on_import_row = on_import_row
+        self._import_sample = sample_row
+        self.import_btn.show()
+        self.template_btn.show()
+
+    def _export_headers_and_rows(self):
+        headers = list(self.columns)
+        if headers and headers[-1] == "إجراءات":  # drop the actions column
+            headers = headers[:-1]
+        data = []
+        for row in self._all_rows:
+            cells = []
+            for i in range(len(headers)):
+                c = row.cells[i] if i < len(row.cells) else ""
+                if isinstance(c, Badge):
+                    cells.append(c.text)
+                elif isinstance(c, Widget):
+                    cells.append("")
+                else:
+                    cells.append("" if c is None else str(c))
+            data.append(cells)
+        return headers, data
+
+    def _on_export(self):
+        from application.services.report_engine import ReportEngine
+        from config.settings import EXPORTS_DIR
+        headers, data = self._export_headers_and_rows()
+        default = f"{self.export_title} - {datetime.now().strftime('%Y%m%d_%H%M')}"
+        dest, selected = QFileDialog.getSaveFileName(
+            self, "تصدير الجدول", default, "Excel (*.xlsx);;PDF (*.pdf)")
+        if not dest:
+            return
+        is_pdf = dest.lower().endswith(".pdf") or "pdf" in (selected or "").lower()
+        try:
+            eng = ReportEngine(export_dir=str(EXPORTS_DIR))
+            if is_pdf:
+                if not dest.lower().endswith(".pdf"):
+                    dest += ".pdf"
+                eng.export_to_pdf(self.export_title, headers, data,
+                                  title=self.export_title, dest_path=dest)
+            else:
+                if not dest.lower().endswith(".xlsx"):
+                    dest += ".xlsx"
+                eng.export_to_excel(self.export_title, headers, data,
+                                    title=self.export_title, dest_path=dest)
+            Toast.success(self, "تم تصدير الجدول بنجاح")
+        except Exception as e:
+            logger.error(f"Table export failed: {e}")
+            Toast.error(self, "تعذّر تصدير الجدول")
+
+    def _on_template(self):
+        if not self._import_columns:
+            return
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+        from openpyxl.utils import get_column_letter
+        default = f"قالب - {self.export_title}.xlsx"
+        dest, _ = QFileDialog.getSaveFileName(
+            self, "حفظ قالب الاستيراد", default, "Excel (*.xlsx)")
+        if not dest:
+            return
+        if not dest.lower().endswith(".xlsx"):
+            dest += ".xlsx"
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.sheet_view.rightToLeft = True
+            ws.append(self._import_columns)
+            for cell in ws[1]:
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = PatternFill("solid", fgColor="2B4C7E")
+            if self._import_sample:
+                ws.append(list(self._import_sample))
+            for i in range(1, len(self._import_columns) + 1):
+                ws.column_dimensions[get_column_letter(i)].width = 22
+            wb.save(dest)
+            Toast.success(self, "تم حفظ ملف القالب (Excel)")
+        except Exception as e:
+            logger.error(f"Template export failed: {e}")
+            Toast.error(self, "تعذّر حفظ القالب")
+
+    def _on_import(self):
+        if not self._on_import_row:
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self, "استيراد من Excel", "", "Excel (*.xlsx)")
+        if not path:
+            return
+        try:
+            from openpyxl import load_workbook
+            ws = load_workbook(path, data_only=True).active
+            rows = list(ws.iter_rows(values_only=True))
+        except Exception as e:
+            logger.error(f"Import read failed: {e}")
+            Toast.error(self, "تعذّر قراءة الملف")
+            return
+        if not rows:
+            Toast.error(self, "الملف فارغ")
+            return
+        headers = [str(h).strip() if h is not None else "" for h in rows[0]]
+        ok = fail = 0
+        for r in rows[1:]:
+            if r is None or all(v is None for v in r):
+                continue
+            data = {headers[i]: r[i] for i in range(len(headers)) if i < len(r)}
+            try:
+                self._on_import_row(data)
+                ok += 1
+            except Exception as e:
+                logger.error(f"Import row failed: {e}")
+                fail += 1
+        self.refresh_requested.emit()
+        if ok:
+            Toast.success(self, f"تم استيراد {ok} سجل" + (f" (تعذّر {fail})" if fail else ""))
+        else:
+            Toast.error(self, "لم يتم استيراد أي سجل")

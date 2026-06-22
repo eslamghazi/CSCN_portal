@@ -20,9 +20,11 @@ TYPE_LABELS = {"training": "تدريب", "workshop": "ورشة عمل", "course"
 
 
 class TrainingListView(QWidget):
-    def __init__(self, training_service: TrainingService, permission=None):
+    def __init__(self, training_service: TrainingService, permission=None,
+                 financial_service=None):
         super().__init__()
         self.training_service = training_service
+        self.financial_service = financial_service
         self.permission = permission
         self.setup_ui()
         self.load_data()
@@ -44,6 +46,8 @@ class TrainingListView(QWidget):
 
         columns = ["اسم البرنامج", "نوع البرنامج", "الحالة", "إجراءات"]
         self.table = DataTable(columns)
+        self.table.refresh_requested.connect(self.load_data)
+        self.table.set_export_title("البرامج التدريبية")
         self.table.add_filter("الحالة", [(v, k) for k, v in STATUS_LABELS.items()])
         card.add(self.table)
         main_layout.addWidget(card)
@@ -107,7 +111,8 @@ class TrainingListView(QWidget):
 
     def on_sessions_clicked(self, program):
         from ui.pages.training.program_detail import ProgramDetailDialog
-        ProgramDetailDialog(self.training_service, program, self).exec()
+        ProgramDetailDialog(self.training_service, program, self,
+                            financial_service=self.financial_service).exec()
 
     def on_delete_clicked(self, program):
         if not can(self.permission, MODULE, "delete"):

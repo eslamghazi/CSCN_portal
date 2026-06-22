@@ -47,6 +47,8 @@ class FinancialDashboardView(QWidget):
 
         columns = ["التاريخ", "النوع", "المبلغ", "التصنيف", "البيان"]
         self.table = DataTable(columns)
+        self.table.refresh_requested.connect(self.load_data)
+        self.table.set_export_title("المعاملات المالية")
         self.table.search_requested.connect(self.on_search)
         card.add(self.table)
         main_layout.addWidget(card)

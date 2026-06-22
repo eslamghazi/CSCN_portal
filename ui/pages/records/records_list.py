@@ -40,6 +40,8 @@ class RecordsListView(QWidget):
 
         columns = ["رقم السجل", "عنوان السجل", "النوع", "مكان الحفظ", "حالة السجل", "إجراءات"]
         self.table = DataTable(columns)
+        self.table.refresh_requested.connect(self.load_data)
+        self.table.set_export_title("السجلات")
         self.table.add_filter("الحالة", [("نشط", "active"), ("مؤرشف", "archived")])
         card.add(self.table)
         main_layout.addWidget(card)

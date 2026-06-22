@@ -45,6 +45,8 @@ class StandardsListView(QWidget):
 
         columns = ["الكود", "اسم المعيار", "التصنيف", "الحالة", "نسبة الإنجاز", "إجراءات"]
         self.table = DataTable(columns)
+        self.table.refresh_requested.connect(self.load_data)
+        self.table.set_export_title("المعايير")
         self.table.add_filter("الحالة", [("نشط", "active"), ("غير نشط", "inactive")])
         card.add(self.table)
         main_layout.addWidget(card)

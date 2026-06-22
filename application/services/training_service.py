@@ -187,7 +187,9 @@ class TrainingService:
 
     # ------------------------------------------------------------ trainees
     def get_all_trainees(self) -> List[Trainee]:
-        return self.trainee_repo.get_all()
+        # Return ALL trainees ordered by id (the repo's get_all() caps at 100,
+        # which would hide the rest after a bulk add of e.g. 500).
+        return self.trainee_repo.session.query(Trainee).order_by(Trainee.id).all()
 
     def create_trainee(self, full_name: str, email: str = None, phone: str = None,
                        organization: str = None) -> Trainee:
@@ -197,6 +199,50 @@ class TrainingService:
             module="training", action="create_trainee",
             entity_type="Trainee", entity_id=trainee.id)
         return trainee
+
+    def bulk_create_trainees(self, prefix: str, count: int, start: int = 1,
+                             organization: str = None) -> int:
+        """Create `count` trainees named "<prefix> <n>" (n from `start`), e.g.
+        "طالب 1 … طالب 500". Inserted in a single transaction for speed.
+        Returns the number created."""
+        prefix = (prefix or "").strip() or "متدرب"
+        session = self.trainee_repo.session
+        trainees = [
+            Trainee(full_name=f"{prefix} {start + i}", organization=organization)
+            for i in range(count)
+        ]
+        try:
+            session.add_all(trainees)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        self.audit_service.log_action(
+            module="training", action="bulk_create_trainees", entity_type="Trainee",
+            new_values={"count": count, "prefix": prefix, "organization": organization})
+        return len(trainees)
+
+    def import_trainees(self, records) -> int:
+        """Create trainees from imported rows (dicts with full_name / email /
+        phone / organization). Rows without a name are skipped. One transaction.
+        Returns the number created."""
+        session = self.trainee_repo.session
+        objs = []
+        for r in records:
+            name = (r.get("full_name") or "").strip()
+            if not name:
+                continue
+            objs.append(Trainee(
+                full_name=name, email=r.get("email") or None,
+                phone=r.get("phone") or None, organization=r.get("organization") or None))
+        if not objs:
+            return 0
+        session.add_all(objs)
+        session.commit()
+        self.audit_service.log_action(
+            module="training", action="import_trainees", entity_type="Trainee",
+            new_values={"count": len(objs)})
+        return len(objs)
 
     # ---------------------------------------------------------- attendance
     def get_session_attendances(self, session_id: int) -> List[SessionAttendance]:

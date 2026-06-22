@@ -92,7 +92,8 @@ class DashboardLayout(QWidget):
                 widget = EmployeeDirectoryView(self.services["hr"], permission=perm)
             elif key == "training":
                 from ui.pages.training.training_list import TrainingListView
-                widget = TrainingListView(self.services["training"], permission=perm)
+                widget = TrainingListView(self.services["training"], permission=perm,
+                                          financial_service=self.services.get("financial"))
             elif key == "financial":
                 from qtpy.QtWidgets import QTabWidget
                 from ui.pages.financial.financial_dashboard import FinancialDashboardView
@@ -164,8 +165,29 @@ class DashboardLayout(QWidget):
             # (the sidebar's nav buttons reflect the role/permission gating).
             if module_key not in self.sidebar.nav_buttons:
                 return
-            self.module_stack.setCurrentWidget(self.modules[module_key]["widget"])
+            widget = self.modules[module_key]["widget"]
+            self.module_stack.setCurrentWidget(widget)
             self.topbar.set_title(self.modules[module_key]["title"])
             self.breadcrumb.set_path(["الرئيسية", self.modules[module_key]["title"]])
             # Keep the sidebar selection in sync (e.g. when navigating from a KPI).
             self.sidebar.set_active(module_key)
+            # Auto-refresh the page so it always shows the latest data on open.
+            self._refresh_page(widget)
+
+    @staticmethod
+    def _refresh_page(widget):
+        """Call a page's refresh hook on navigation (refresh() or load_data()).
+        For a tabbed module (e.g. financial), refresh the active tab."""
+        from qtpy.QtWidgets import QTabWidget
+        if isinstance(widget, QTabWidget):
+            DashboardLayout._refresh_page(widget.currentWidget())
+            return
+        for name in ("refresh", "load_data", "load_kpis"):
+            fn = getattr(widget, name, None)
+            if callable(fn):
+                try:
+                    fn()
+                except Exception as e:
+                    from loguru import logger
+                    logger.error(f"Page auto-refresh failed: {e}")
+                return

@@ -9,7 +9,7 @@ from ui.widgets.loading_overlay import LoadingOverlay
 from ui.widgets.toast import Toast
 from ui.widgets.confirm import confirm
 from ui.permissions import can
-from application.services.hr_service import HRService
+from application.services.hr_service import HRService, EmployeeDTO
 from ui.pages.hr.employee_dialog import EmployeeDialog
 
 MODULE = "hr"
@@ -37,11 +37,28 @@ class EmployeeDirectoryView(QWidget):
 
         columns = ["الرقم التعريفي", "الاسم بالكامل", "رقم الهاتف", "المنصب", "الحالة", "إجراءات"]
         self.table = DataTable(columns)
+        self.table.refresh_requested.connect(self.load_data)
+        self.table.set_export_title("الموظفون")
+        if can(self.permission, MODULE, "create"):
+            self.table.enable_import(
+                ["الاسم بالكامل", "البريد الإلكتروني", "رقم الهاتف"],
+                self._import_row,
+                ["محمد أحمد", "m@example.com", "0100000000"])
         self.table.add_filter("الحالة", [("نشط", "active"), ("غير نشط", "inactive")])
         card.add(self.table)
         main_layout.addWidget(card)
 
         self.overlay = LoadingOverlay(self)
+
+    def _import_row(self, d):
+        def s(key):
+            v = d.get(key)
+            return None if v in (None, "") else str(v).strip()
+        name = s("الاسم بالكامل")
+        if not name:
+            raise ValueError("الاسم مطلوب")
+        self.hr_service.add_employee(EmployeeDTO(
+            full_name=name, email=s("البريد الإلكتروني"), phone=s("رقم الهاتف")))
 
     def load_data(self):
         self.overlay.start()

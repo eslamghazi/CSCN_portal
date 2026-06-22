@@ -76,9 +76,22 @@ class _LookupSection(QWidget):
         layout.addLayout(head)
 
         self.table = DataTable(["الاسم", "الوصف", "إجراءات"])
+        self.table.refresh_requested.connect(self.refresh)
+        self.table.set_export_title(title)
+        self.table.enable_import(
+            ["الاسم", "الوصف"], self._import_row, ["اسم العنصر", "وصف اختياري"])
         layout.addWidget(self.table)
 
         self.refresh()
+
+    def _import_row(self, d):
+        name = d.get("الاسم")
+        name = str(name).strip() if name not in (None, "") else ""
+        if not name:
+            raise ValueError("الاسم مطلوب")
+        desc = d.get("الوصف")
+        desc = str(desc).strip() if desc not in (None, "") else None
+        self.creator(name, desc)
 
     def on_add(self):
         if _LookupDialog(f"إضافة - {self.title}", self.creator, parent=self).exec():

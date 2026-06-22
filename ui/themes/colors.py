@@ -5,71 +5,75 @@ values (see ui/themes/stylesheet.py) and components read them directly. Legacy
 attribute names (PRIMARY, SUCCESS, WARNING, DANGER, INFO, BORDER, TEXT,
 TEXT_MUTED, BACKGROUND, SECONDARY) are kept as aliases so existing imports keep
 working with the refreshed palette.
+
+Palette: a cohesive teal / emerald scheme — calm and fitting for a healthcare /
+nursing center, with a single hue family for primary + accent (so focus rings
+and buttons agree instead of clashing).
 """
 
 
 class Colors:
-    # --- Brand / primary (indigo) ---
-    PRIMARY = "#2B4C7E"
-    PRIMARY_HOVER = "#34598F"
-    PRIMARY_PRESSED = "#22406B"
-    PRIMARY_DISABLED = "#A9B8CE"
-    PRIMARY_SOFT = "#EAF0F8"
-    PRIMARY_SOFT_TEXT = "#22406B"
+    # --- Brand / primary (teal) ---
+    PRIMARY = "#0F766E"
+    PRIMARY_HOVER = "#0D9488"
+    PRIMARY_PRESSED = "#115E59"
+    PRIMARY_DISABLED = "#9DC4C0"
+    PRIMARY_SOFT = "#E6F3F1"
+    PRIMARY_SOFT_TEXT = "#115E59"
 
-    # --- Accent (teal): links, focus, progress ---
-    ACCENT = "#0E7C86"
-    ACCENT_HOVER = "#0B6A72"
-    ACCENT_SOFT = "#E0F2F3"
+    # --- Accent (bright teal): links, focus, progress ---
+    ACCENT = "#0D9488"
+    ACCENT_HOVER = "#0F766E"
+    ACCENT_SOFT = "#D9F2EF"
 
     # --- Surfaces / backgrounds ---
-    BG = "#F4F6FA"
+    BG = "#F6F8F8"
     SURFACE = "#FFFFFF"
-    SURFACE_ALT = "#F8FAFC"
-    SURFACE_SUNKEN = "#EEF2F7"
+    SURFACE_ALT = "#F1F6F5"
+    SURFACE_SUNKEN = "#E9F0EF"
 
     # --- Borders / dividers ---
-    BORDER = "#E2E8F0"
-    BORDER_STRONG = "#CBD5E1"
-    GRIDLINE = "#EDF1F6"
+    BORDER = "#E3E8E8"
+    BORDER_STRONG = "#C7D2D0"
+    GRIDLINE = "#EDF2F1"
 
     # --- Text ---
-    TEXT = "#1F2A37"
-    TEXT_SECONDARY = "#566375"
-    TEXT_MUTED = "#8A97A8"
+    TEXT = "#14201E"
+    TEXT_SECONDARY = "#4F5E5B"
+    TEXT_MUTED = "#84938F"
     TEXT_ON_PRIMARY = "#FFFFFF"
 
     # --- Semantic: base / soft background / text-on-soft ---
-    SUCCESS = "#1E8E5A"
-    SUCCESS_BG = "#E3F4EC"
-    SUCCESS_TEXT = "#136B43"
+    SUCCESS = "#16A34A"
+    SUCCESS_BG = "#E4F6EA"
+    SUCCESS_TEXT = "#166534"
 
-    WARNING = "#B7791F"
-    WARNING_BG = "#FBF1DC"
-    WARNING_TEXT = "#8A5B0E"
+    WARNING = "#D97706"
+    WARNING_BG = "#FCEFD9"
+    WARNING_TEXT = "#92580B"
 
-    DANGER = "#C53D3D"
-    DANGER_BG = "#FBE6E6"
-    DANGER_TEXT = "#9B2C2C"
+    DANGER = "#DC2626"
+    DANGER_BG = "#FBE3E3"
+    DANGER_TEXT = "#991B1B"
 
-    INFO = "#2B6CB0"
-    INFO_BG = "#E4EFFA"
-    INFO_TEXT = "#1F4F84"
+    INFO = "#0E7490"
+    INFO_BG = "#DEF1F5"
+    INFO_TEXT = "#0B5566"
 
     # --- KPI accents (decorative) ---
-    KPI_BLUE = "#2B6CB0"
-    KPI_GREEN = "#1E8E5A"
-    KPI_AMBER = "#B7791F"
+    KPI_BLUE = "#0E7490"
+    KPI_GREEN = "#16A34A"
+    KPI_AMBER = "#D97706"
     KPI_PURPLE = "#6D5BD0"
 
     # --- Sidebar ---
-    SIDEBAR_BG_TOP = "#22406B"
-    SIDEBAR_BG_BOTTOM = "#2B4C7E"
+    SIDEBAR_BG_TOP = "#134E4A"
+    SIDEBAR_BG_BOTTOM = "#0F766E"
     SIDEBAR_TEXT = "#FFFFFF"
-    SIDEBAR_TEXT_MUTED = "rgba(255, 255, 255, 0.55)"
+    SIDEBAR_TEXT_MUTED = "rgba(255, 255, 255, 0.58)"
     SIDEBAR_ACTIVE_BG = "rgba(255, 255, 255, 0.16)"
-    SIDEBAR_ACTIVE_BAR = "#37C5C9"
-    SIDEBAR_HOVER_BG = "rgba(255, 255, 255, 0.09)"
+    SIDEBAR_ACTIVE_BAR = "#2DD4BF"
+    SIDEBAR_HOVER_BG = "rgba(255, 255, 255, 0.10)"
     SIDEBAR_LOGOUT = "#FCA5A5"
 
     # --- Legacy aliases (kept so old imports don't break) ---

@@ -1,7 +1,9 @@
+from datetime import date
+
 from qtpy.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QComboBox,
-    QDateEdit, QSpinBox, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView,
-    QCheckBox
+    QDateEdit, QSpinBox, QDoubleSpinBox, QTabWidget, QTableWidget, QTableWidgetItem,
+    QHeaderView, QCheckBox, QFileDialog
 )
 from qtpy.QtCore import Qt, QDate
 from loguru import logger
@@ -11,6 +13,8 @@ from ui.widgets.icon_button import IconButton
 from ui.widgets.toast import Toast
 from ui.widgets.confirm import confirm
 from ui.widgets.cell import cell_widget
+from ui.themes.colors import Colors
+from application.services.financial_service import TransactionDTO
 
 
 class _UnitDialog(BaseDialog):
@@ -132,6 +136,82 @@ class TraineeDialog(BaseDialog):
             Toast.error(self, "تعذّر حفظ المتدرب")
 
 
+class BulkTraineeDialog(BaseDialog):
+    """Add many trainees at once — a name prefix + a count generate
+    "طالب 1 … طالب N" — and optionally record the total fees as revenue in the
+    center's finances."""
+
+    def __init__(self, training_service, parent=None, financial_service=None,
+                 default_group=None):
+        super().__init__("إضافة مجموعة متدربين", parent, min_width=500)
+        self.ts = training_service
+        self.financial = financial_service
+
+        self.prefix = self.add_field("بادئة الاسم:", QLineEdit("طالب"), required=True)
+        start = QSpinBox()
+        start.setRange(1, 1_000_000)
+        count = QSpinBox()
+        count.setRange(1, 10_000)
+        count.setValue(50)
+        self.start, self.count = self.add_row(
+            ("يبدأ الترقيم من:", start), ("عدد المتدربين:", count))
+        self.group = self.add_field(
+            "المجموعة / الجهة (اختياري):", QLineEdit(default_group or ""))
+        fee = QDoubleSpinBox()
+        fee.setRange(0, 1_000_000)
+        fee.setDecimals(2)
+        fee.setSuffix(" ج.م")
+        self.fee = self.add_field(
+            "المبلغ المدفوع لكل متدرب (اختياري):", fee)
+
+        self.preview = QLabel("")
+        self.preview.setWordWrap(True)
+        self.preview.setStyleSheet(
+            f"color: {Colors.TEXT}; background: {Colors.SURFACE_ALT};"
+            f" border: 1px solid {Colors.BORDER}; border-radius: 8px; padding: 10px;")
+        self.add_widget(self.preview)
+
+        self.prefix.widget.textChanged.connect(self._update_preview)
+        for spin in (start, count, fee):
+            spin.valueChanged.connect(self._update_preview)
+        self._update_preview()
+        self.build_buttons(save_text="إضافة")
+
+    def _update_preview(self, *args):
+        prefix = self.prefix.text().strip() or "طالب"
+        start = self.start.widget.value()
+        count = self.count.widget.value()
+        fee = self.fee.widget.value()
+        last = start + count - 1
+        text = f"سيتم إنشاء {count} متدرب: «{prefix} {start}» … «{prefix} {last}»."
+        if fee > 0:
+            text += f"\nإجمالي الرسوم: {fee * count:,.2f} ج.م — تُسجَّل كإيراد في حسابات المركز."
+        self.preview.setText(text)
+
+    def on_save(self):
+        self.prefix.clear_error()
+        prefix = self.prefix.text().strip()
+        if not prefix:
+            self.prefix.set_error("بادئة الاسم مطلوبة.")
+            return
+        count = self.count.widget.value()
+        start = self.start.widget.value()
+        fee = self.fee.widget.value()
+        group = self.group.text().strip() or None
+        try:
+            created = self.ts.bulk_create_trainees(prefix, count, start, group)
+            if fee > 0 and self.financial is not None:
+                total = fee * created
+                desc = f"رسوم اشتراك {created} متدرب" + (f" - {group}" if group else "")
+                self.financial.add_transaction(TransactionDTO(
+                    transaction_type="revenue", amount=total, date=date.today(),
+                    description=desc, source="رسوم تدريب", category="تدريب"))
+            self.accept()
+        except Exception as e:
+            logger.error(f"Bulk create trainees failed: {e}")
+            Toast.error(self, "تعذّر إضافة المجموعة")
+
+
 class AttendanceDialog(BaseDialog):
     """Record attendance for a session across all trainees."""
 
@@ -191,9 +271,10 @@ def _table(columns):
 class ProgramDetailDialog(BaseDialog):
     """Manage a program's units (courses/workshops), sessions and trainees."""
 
-    def __init__(self, training_service, program, parent=None):
+    def __init__(self, training_service, program, parent=None, financial_service=None):
         super().__init__(f"إدارة البرنامج: {program.name}", parent, min_width=720)
         self.ts = training_service
+        self.financial = financial_service
         self.program = program
 
         tabs = QTabWidget()
@@ -336,9 +417,16 @@ class ProgramDetailDialog(BaseDialog):
         layout = QVBoxLayout(tab)
         bar = QHBoxLayout()
         bar.addStretch()
+        tmpl_btn = IconButton("قالب Excel", "browse", variant="secondary")
+        tmpl_btn.clicked.connect(self._trainees_template)
+        import_btn = IconButton("استيراد", "upload", variant="secondary")
+        import_btn.clicked.connect(self._import_trainees)
+        bulk_btn = IconButton("إضافة مجموعة", "add", variant="secondary")
+        bulk_btn.clicked.connect(self._add_trainees_bulk)
         add_btn = IconButton("إضافة متدرب", "add", variant="primary")
         add_btn.clicked.connect(self._add_trainee)
-        bar.addWidget(add_btn)
+        for b in (tmpl_btn, import_btn, bulk_btn, add_btn):
+            bar.addWidget(b)
         layout.addLayout(bar)
         self.trainees_table = _table(["الاسم", "الجهة", "رقم الهاتف", "البريد"])
         layout.addWidget(self.trainees_table)
@@ -359,3 +447,85 @@ class ProgramDetailDialog(BaseDialog):
         if TraineeDialog(self.ts, self).exec():
             self.refresh_trainees()
             Toast.success(self, "تمت إضافة المتدرب")
+
+    def _add_trainees_bulk(self):
+        dlg = BulkTraineeDialog(
+            self.ts, self, financial_service=self.financial,
+            default_group=self.program.name)
+        if dlg.exec():
+            self.refresh_trainees()
+            Toast.success(self, "تمت إضافة المجموعة بنجاح")
+
+    _TRAINEE_COLS = ["الاسم", "الجهة", "رقم الهاتف", "البريد"]
+
+    def _trainees_template(self):
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+        from openpyxl.utils import get_column_letter
+        dest, _ = QFileDialog.getSaveFileName(
+            self, "حفظ قالب الطلاب", "قالب الطلاب.xlsx", "Excel (*.xlsx)")
+        if not dest:
+            return
+        if not dest.lower().endswith(".xlsx"):
+            dest += ".xlsx"
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.sheet_view.rightToLeft = True
+            ws.append(self._TRAINEE_COLS)
+            for c in ws[1]:
+                c.font = Font(bold=True, color="FFFFFF")
+                c.fill = PatternFill("solid", fgColor="2B4C7E")
+            ws.append(["طالب مثال", "كلية التمريض", "0100000000", "student@example.com"])
+            for i in range(1, len(self._TRAINEE_COLS) + 1):
+                ws.column_dimensions[get_column_letter(i)].width = 24
+            wb.save(dest)
+            Toast.success(self, "تم حفظ قالب الطلاب (Excel)")
+        except Exception as e:
+            logger.error(f"Trainee template failed: {e}")
+            Toast.error(self, "تعذّر حفظ القالب")
+
+    def _import_trainees(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "استيراد الطلاب من Excel", "", "Excel (*.xlsx)")
+        if not path:
+            return
+        try:
+            from openpyxl import load_workbook
+            ws = load_workbook(path, data_only=True).active
+            rows = list(ws.iter_rows(values_only=True))
+        except Exception as e:
+            logger.error(f"Trainee import read failed: {e}")
+            Toast.error(self, "تعذّر قراءة الملف")
+            return
+        if not rows:
+            Toast.error(self, "الملف فارغ")
+            return
+        headers = [str(h).strip() if h is not None else "" for h in rows[0]]
+
+        def val(r, key):
+            if key in headers:
+                i = headers.index(key)
+                v = r[i] if i < len(r) else None
+                return None if v in (None, "") else str(v).strip()
+            return None
+
+        records = []
+        for r in rows[1:]:
+            if r is None or all(v is None for v in r):
+                continue
+            records.append({
+                "full_name": val(r, "الاسم"), "organization": val(r, "الجهة"),
+                "phone": val(r, "رقم الهاتف"), "email": val(r, "البريد"),
+            })
+        try:
+            n = self.ts.import_trainees(records)
+        except Exception as e:
+            logger.error(f"Trainee import failed: {e}")
+            Toast.error(self, "تعذّر استيراد الطلاب")
+            return
+        self.refresh_trainees()
+        if n:
+            Toast.success(self, f"تم استيراد {n} طالب")
+        else:
+            Toast.error(self, "لم يتم استيراد أي طالب")

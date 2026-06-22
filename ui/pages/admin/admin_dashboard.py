@@ -67,6 +67,8 @@ class AdminDashboardView(QWidget):
 
         self.users_table = DataTable(
             ["الاسم", "اسم المستخدم", "الصلاحية", "الحالة", "إجراءات"])
+        self.users_table.refresh_requested.connect(self.load_users)
+        self.users_table.set_export_title("المستخدمون")
         self.users_table.add_filter("الحالة", [("نشط", True), ("موقوف", False)])
         layout.addWidget(self.users_table)
 
@@ -84,6 +86,8 @@ class AdminDashboardView(QWidget):
 
         self.logs_table = DataTable(
             ["التاريخ والوقت", "المستخدم", "الوحدة", "الإجراء", "الكيان"])
+        self.logs_table.refresh_requested.connect(self.load_logs)
+        self.logs_table.set_export_title("سجل العمليات")
         layout.addWidget(self.logs_table)
 
     def setup_full_log_tab(self):
@@ -116,6 +120,12 @@ class AdminDashboardView(QWidget):
 
         self.full_log_view = LogConsole()
         layout.addWidget(self.full_log_view)
+
+    def refresh(self):
+        """Reload all tabs (called on navigation to this page)."""
+        self.load_users()
+        self.load_logs()
+        self.load_full_log()
 
     def load_users(self):
         try:

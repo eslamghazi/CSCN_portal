@@ -9,7 +9,7 @@ from ui.widgets.loading_overlay import LoadingOverlay
 from ui.widgets.toast import Toast
 from ui.widgets.confirm import confirm
 from ui.permissions import can
-from application.services.partnership_service import PartnershipService
+from application.services.partnership_service import PartnershipService, PartnershipDTO
 from ui.pages.partnerships.partnership_dialog import (
     PartnershipDialog, PartnerDetailsDialog, AgreementsDialog,
 )
@@ -39,10 +39,28 @@ class PartnershipsListView(QWidget):
 
         columns = ["اسم الجهة", "مسؤول التواصل", "البريد الإلكتروني", "رقم الهاتف", "إجراءات"]
         self.table = DataTable(columns)
+        self.table.refresh_requested.connect(self.load_data)
+        self.table.set_export_title("الشراكات")
+        if can(self.permission, MODULE, "create"):
+            self.table.enable_import(
+                ["اسم الجهة", "مسؤول التواصل", "البريد الإلكتروني", "رقم الهاتف", "العنوان"],
+                self._import_row,
+                ["شركة مثال", "أحمد محمد", "info@example.com", "0100000000", "القاهرة"])
         card.add(self.table)
         main_layout.addWidget(card)
 
         self.overlay = LoadingOverlay(self)
+
+    def _import_row(self, d):
+        def s(key):
+            v = d.get(key)
+            return None if v in (None, "") else str(v).strip()
+        name = s("اسم الجهة")
+        if not name:
+            raise ValueError("اسم الجهة مطلوب")
+        self.partner_service.add_partner(PartnershipDTO(
+            name=name, contact_person=s("مسؤول التواصل"), email=s("البريد الإلكتروني"),
+            phone=s("رقم الهاتف"), address=s("العنوان")))
 
     def load_data(self):
         self.overlay.start()
