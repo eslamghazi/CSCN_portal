@@ -1,23 +1,22 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_submodules
 
-datas = [('.env', '.')]
-hiddenimports = []
-datas += collect_data_files('qtawesome')
-hiddenimports += collect_submodules('domain')
-hiddenimports += collect_submodules('infrastructure')
+hiddenimports = ['uvicorn.loops.asyncio', 'uvicorn.protocols.http.h11_impl', 'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan.on', 'multipart', 'sqlalchemy.dialects.sqlite', 'pystray._win32', 'PIL.ImageDraw']
+hiddenimports += collect_submodules('api')
 hiddenimports += collect_submodules('application')
-hiddenimports += collect_submodules('ui')
-hiddenimports += collect_submodules('qtpy')
-hiddenimports += collect_submodules('qtawesome')
+hiddenimports += collect_submodules('infrastructure')
+hiddenimports += collect_submodules('domain')
+hiddenimports += collect_submodules('config')
+hiddenimports += collect_submodules('database')
+hiddenimports += collect_submodules('uvicorn')
+hiddenimports += collect_submodules('pystray')
 
 
 a = Analysis(
-    ['main.py'],
+    ['web_main.py'],
     pathex=[],
     binaries=[],
-    datas=datas,
+    datas=[('.env', '.'), ('frontend\\dist', 'frontend\\dist'), ('ui\\resources\\fonts', 'ui\\resources\\fonts'), ('ui\\resources\\icons', 'ui\\resources\\icons')],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

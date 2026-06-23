@@ -49,6 +49,27 @@ class PartnershipService:
     def get_all_partners(self) -> List[Partnership]:
         return self.partner_repo.get_all()
 
+    def get_partner(self, partner_id: int) -> Optional[Partnership]:
+        return self.partner_repo.get_by_id(partner_id)
+
+    def update_partner(self, data: PartnershipDTO) -> Optional[Partnership]:
+        if not data.id:
+            return None
+        p = self.partner_repo.get_by_id(data.id)
+        if not p:
+            return None
+        p.name = data.name
+        p.contact_person = data.contact_person
+        p.email = data.email
+        p.phone = data.phone
+        p.address = data.address
+        updated = self.partner_repo.update(p)
+        self.audit_service.log_action(
+            module="partnership", action="update_partner",
+            entity_type="Organization", entity_id=updated.id,
+            new_values={"name": updated.name})
+        return updated
+
     def delete_partner(self, partner_id: int) -> bool:
         deleted = self.partner_repo.delete(partner_id)
         if deleted:
@@ -82,5 +103,16 @@ class PartnershipService:
             entity_id=created.id,
             new_values={"title": title, "partner_id": partner_id}
         )
-        
+
         return created
+
+    def list_agreements(self, partner_id: int) -> List[Agreement]:
+        return self.agreement_repo.get_by_partner(partner_id)
+
+    def delete_agreement(self, agreement_id: int) -> bool:
+        deleted = self.agreement_repo.delete(agreement_id)
+        if deleted:
+            self.audit_service.log_action(
+                module="partnership", action="delete_agreement",
+                entity_type="Agreement", entity_id=agreement_id)
+        return deleted

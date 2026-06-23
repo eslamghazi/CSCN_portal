@@ -36,9 +36,10 @@ def test_mainwindow_builds_all_pages(qtbot, db_session):
     services = app_main.build_services(db_session)
 
     sa = db_session.query(Role).filter(Role.name == "superadmin").one()
-    AuthService._current_user = UserDTO(
+    from application.context import set_current_user
+    set_current_user(UserDTO(
         id=1, username="superadmin", full_name="SA",
-        role_id=sa.id, role_name="superadmin", is_active=True)
+        role_id=sa.id, role_name="superadmin", is_active=True))
 
     window = MainWindow(services)
     qtbot.addWidget(window)

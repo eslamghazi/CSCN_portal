@@ -137,6 +137,22 @@ class FinancialService:
             combined.append(e)
         return sorted(combined, key=lambda x: x.date, reverse=True)
         
+    def delete_revenue(self, revenue_id: int) -> bool:
+        deleted = self.revenue_repo.delete(revenue_id)
+        if deleted:
+            self.audit_service.log_action(
+                module="financial", action="delete_revenue",
+                entity_type="Revenue", entity_id=revenue_id)
+        return deleted
+
+    def delete_expense(self, expense_id: int) -> bool:
+        deleted = self.expense_repo.delete(expense_id)
+        if deleted:
+            self.audit_service.log_action(
+                module="financial", action="delete_expense",
+                entity_type="Expense", entity_id=expense_id)
+        return deleted
+
     def get_financial_summary(self) -> Dict[str, float]:
         txs = self.get_all_transactions()
         total_rev = sum([float(t.amount) for t in txs if getattr(t, 'transaction_type') == "revenue"])

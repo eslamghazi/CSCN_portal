@@ -19,4 +19,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")
+    # Wait up to 5s for a lock instead of failing immediately with
+    # "database is locked" — matters once several LAN clients write concurrently.
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()

@@ -1,13 +1,14 @@
 from domain.entities.user import Role, RolePermission
 from application.services.permission_service import PermissionService
 from application.services.auth_service import AuthService
+from application.context import set_current_user, clear_current_user
 from application.dto.user_dto import UserDTO
 
 
 def _login(role_id, role_name):
-    AuthService._current_user = UserDTO(
+    set_current_user(UserDTO(
         id=1, username="u", full_name="U", role_id=role_id, role_name=role_name, is_active=True
-    )
+    ))
 
 
 def test_superadmin_allowed_by_name(db_session):
@@ -51,5 +52,5 @@ def test_missing_permission_row_denies(db_session):
 
 def test_anonymous_denied(db_session):
     svc = PermissionService(db_session, AuthService(None))
-    AuthService._current_user = None
+    clear_current_user()
     assert svc.has_permission("users", "create") is False

@@ -27,8 +27,19 @@ data/exports/
 data/reports/
 data/backups/
 
+# Frontend (React/Vite) — node deps and build output are regenerated
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+npm-debug.log*
+
 # Environment / secrets
-# .env
+# .env is intentionally tracked (bundled into the build); it must NOT contain a
+# real password. Generated credentials and the session-cookie secret are never tracked:
+credentials.txt
+.session_secret
+*.session_secret
 
 # IDE
 .vscode/

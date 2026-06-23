@@ -2,6 +2,7 @@
 without launching the Qt GUI."""
 from domain.entities.user import Role, User, RolePermission
 from application.services.auth_service import AuthService
+from application.context import set_current_user
 from application.dto.user_dto import UserDTO
 import main as app_main
 
@@ -41,12 +42,12 @@ def test_seeded_permissions_enforce_admin_vs_user(db_session):
     admin_role = db_session.query(Role).filter(Role.name == "admin").one()
     user_role = db_session.query(Role).filter(Role.name == "user").one()
 
-    AuthService._current_user = UserDTO(
-        id=1, username="a", full_name="A", role_id=admin_role.id, role_name="admin", is_active=True)
+    set_current_user(UserDTO(
+        id=1, username="a", full_name="A", role_id=admin_role.id, role_name="admin", is_active=True))
     assert perm.has_permission("users", "create") is True
 
-    AuthService._current_user = UserDTO(
-        id=2, username="u", full_name="U", role_id=user_role.id, role_name="user", is_active=True)
+    set_current_user(UserDTO(
+        id=2, username="u", full_name="U", role_id=user_role.id, role_name="user", is_active=True))
     assert perm.has_permission("users", "create") is False
     assert perm.has_permission("documents", "view") is True
 
@@ -58,8 +59,8 @@ def test_reconcile_blocks_user_from_restricted_pages(db_session):
     perm = services["permission"]
 
     user_role = db_session.query(Role).filter(Role.name == "user").one()
-    AuthService._current_user = UserDTO(
-        id=3, username="u", full_name="U", role_id=user_role.id, role_name="user", is_active=True)
+    set_current_user(UserDTO(
+        id=3, username="u", full_name="U", role_id=user_role.id, role_name="user", is_active=True))
 
     # Entry pages: data-entry users can view + add + edit, but never delete.
     for module in ("documents", "records", "training"):

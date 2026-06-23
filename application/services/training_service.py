@@ -65,6 +65,9 @@ class TrainingService:
 
     def get_all_programs(self) -> List[TrainingProgram]:
         return self.program_repo.get_all()
+
+    def get_program(self, program_id: int) -> Optional[TrainingProgram]:
+        return self.program_repo.get_by_id(program_id)
         
     def update_program(self, data: TrainingProgramDTO) -> Optional[TrainingProgram]:
         if not data.id:
@@ -162,6 +165,22 @@ class TrainingService:
             module="training", action="create_workshop",
             entity_type="Workshop", entity_id=workshop.id)
         return workshop
+
+    def delete_course(self, course_id: int) -> bool:
+        deleted = self.course_repo.delete(course_id)
+        if deleted:
+            self.audit_service.log_action(
+                module="training", action="delete_course",
+                entity_type="Course", entity_id=course_id)
+        return deleted
+
+    def delete_workshop(self, workshop_id: int) -> bool:
+        deleted = self.workshop_repo.delete(workshop_id)
+        if deleted:
+            self.audit_service.log_action(
+                module="training", action="delete_workshop",
+                entity_type="Workshop", entity_id=workshop_id)
+        return deleted
 
     # ------------------------------------------------------------ sessions
     def get_program_sessions(self, program_id: int) -> List[TrainingSession]:

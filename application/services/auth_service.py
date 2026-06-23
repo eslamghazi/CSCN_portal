@@ -3,15 +3,16 @@ from typing import List, Optional, Tuple
 from domain.interfaces.user_repository import UserRepository
 from domain.entities.user import User
 from application.dto.user_dto import UserDTO, UserCreateDTO, LoginResultDTO
+from application.context import set_current_user, get_current_user_ctx, clear_current_user
 
 class AuthService:
     """
     Service responsible for Authentication and Authorization logic.
     """
-    
-    # Store the currently logged in user state (In a real system this would be a session token)
-    # For a desktop app, storing the current user in memory is often sufficient
-    _current_user: Optional[UserDTO] = None
+
+    # The "currently logged in user" is stored in a per-request/per-context
+    # contextvar (see application.context) so it is isolated between concurrent
+    # web requests. The desktop app shares the same mechanism.
 
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
@@ -48,7 +49,7 @@ class AuthService:
                 "is_active": user.is_active
             }
             user_dto = UserDTO(**user_dict)
-            AuthService._current_user = user_dto
+            set_current_user(user_dto)
             return LoginResultDTO(success=True, message="تم تسجيل الدخول بنجاح.", user=user_dto)
             
         return LoginResultDTO(success=False, message="اسم المستخدم أو كلمة المرور غير صحيحة.")
@@ -70,22 +71,22 @@ class AuthService:
             role_name=user.role.name if user.role else None,
             is_active=user.is_active,
         )
-        AuthService._current_user = user_dto
+        set_current_user(user_dto)
         return user_dto
 
     def logout(self) -> None:
         """Clear the current user session."""
-        AuthService._current_user = None
+        clear_current_user()
 
-    @classmethod
-    def get_current_user(cls) -> Optional[UserDTO]:
-        """Get the currently logged in user."""
-        return cls._current_user
+    @staticmethod
+    def get_current_user() -> Optional[UserDTO]:
+        """Get the currently logged in user (per-request contextvar)."""
+        return get_current_user_ctx()
 
-    @classmethod
-    def is_authenticated(cls) -> bool:
+    @staticmethod
+    def is_authenticated() -> bool:
         """Check if a user is logged in."""
-        return cls._current_user is not None
+        return get_current_user_ctx() is not None
 
     def get_all_roles(self) -> List[Tuple[int, str]]:
         """Return (id, name) for every role, for populating UI selectors
@@ -210,5 +211,5 @@ class AuthService:
             "is_active": updated.is_active
         }
         user_dto = UserDTO(**user_dict)
-        AuthService._current_user = user_dto
+        set_current_user(user_dto)
         return LoginResultDTO(success=True, message="تم تحديث بيانات حسابك بنجاح.", user=user_dto)

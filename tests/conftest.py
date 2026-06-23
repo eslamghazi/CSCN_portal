@@ -8,6 +8,7 @@ from database.base import Base
 import domain.entities  # noqa: F401  -- registers all models on Base.metadata
 from application.services.audit_service import AuditService
 from application.services.auth_service import AuthService
+from application.context import clear_current_user
 
 
 @pytest.fixture
@@ -34,7 +35,7 @@ def audit_service(db_session):
 
 @pytest.fixture(autouse=True)
 def _reset_current_user():
-    """AuthService stores the logged-in user in class state; isolate it per test."""
-    AuthService._current_user = None
+    """AuthService stores the logged-in user in a contextvar; isolate it per test."""
+    clear_current_user()
     yield
-    AuthService._current_user = None
+    clear_current_user()
