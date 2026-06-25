@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from api.permissions import require_role
 from api.responses import file_download
+from api.config_api import get_active_port
 from application.services import peer_client, firewall
 
 ZIP_MEDIA = "application/zip"
@@ -39,13 +40,18 @@ def local_ip_addresses() -> List[str]:
 @router.get("/server-info")
 def server_info(user=Depends(require_role())):
     ips = local_ip_addresses()
-    return {"ips": ips, "primary_ip": ips[0], "peer_port": DEFAULT_PORT,
-            "token": get_token(), "is_windows": firewall.is_windows()}
+    web_port = get_active_port()
+    return {"ips": ips, "primary_ip": ips[0], "web_port": web_port,
+            "web_urls": [f"http://{ip}:{web_port}/" for ip in ips],
+            "peer_port": DEFAULT_PORT, "token": get_token(),
+            "is_windows": firewall.is_windows()}
 
 
 @router.post("/firewall")
 def allow_firewall(user=Depends(require_role())):
-    ok = firewall.allow_port(DEFAULT_PORT)
+    # Open both the web port (so other PCs can open the portal in a browser) and
+    # the peer port (data sync).
+    ok = firewall.allow_ports([get_active_port(), DEFAULT_PORT])
     return {"success": ok,
             "message": "تم طلب فتح المنفذ عبر جدار الحماية." if ok else "تعذّر طلب فتح المنفذ."}
 

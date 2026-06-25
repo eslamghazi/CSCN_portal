@@ -6,6 +6,7 @@ asyncio + h11 stack only (uvloop/httptools are unavailable on Windows / py3.8 /
 32-bit). If the tray can't start (no Pillow/pystray), it falls back to running
 the server in the foreground.
 """
+import os
 import socket
 import threading
 import webbrowser
@@ -14,6 +15,34 @@ import uvicorn
 from loguru import logger
 
 from api.config_api import HOST, DEFAULT_PORT, resolve_resource
+
+
+def _ensure_firewall(web_port: int):
+    """Open the web (and peer) port in Windows Firewall so other PCs on the LAN
+    can reach the portal at http://<this-ip>:<port>/. Tries silently first (works
+    if elevated); otherwise asks once via UAC and remembers it asked."""
+    try:
+        from application.services import firewall
+        if not firewall.is_windows():
+            return
+        try:
+            from application.services.peer_server import DEFAULT_PORT as PEER_PORT
+        except Exception:
+            PEER_PORT = 50525
+        ports = [web_port, PEER_PORT]
+        if firewall.try_add_rule_silent(ports):
+            return
+        from config.settings import DATA_DIR
+        marker = DATA_DIR / ".firewall_prompted"
+        if marker.exists():
+            return
+        firewall.allow_ports(ports)   # one-time UAC prompt
+        try:
+            marker.write_text("1", encoding="utf-8")
+        except OSError:
+            pass
+    except Exception as e:
+        logger.debug("Firewall setup skipped: {}", e)
 
 
 def _find_free_port(preferred: int, host: str = "127.0.0.1") -> int:
@@ -117,6 +146,8 @@ def run(app, host: str = HOST, port: int = DEFAULT_PORT, open_browser: bool = Tr
         return
 
     port = _find_free_port(port)
+    os.environ["CSCN_portal_ACTIVE_PORT"] = str(port)   # so the API can report the real port
+    _ensure_firewall(port)
     logger.info("Starting CSCN_portal web server on http://{}:{}/ (LAN) — local: http://127.0.0.1:{}/",
                 host, port, port)
 

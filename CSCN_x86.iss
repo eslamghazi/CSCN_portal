@@ -43,14 +43,15 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; One-dir build: ship the whole folder (exe + the _internal runtime) for fast
 ; startup (no per-launch unpacking).
 Source: "dist\CSCN_x86\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Informational file listing the default login accounts.
-Source: "DEFAULT_LOGINS.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\بيانات الدخول الافتراضية"; Filename: "{app}\DEFAULT_LOGINS.txt"
 Name: "{group}\إزالة {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
+; Best-effort: open the web + peer ports so other PCs can reach the portal over
+; the LAN. Succeeds when the installer runs elevated; otherwise the app requests
+; it once on first launch. runascurrentuser keeps it from failing the install.
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""CSCN Portal"" dir=in action=allow protocol=TCP localport=8765,50525"; Flags: runhidden runascurrentuser skipifdoesntexist; StatusMsg: "إعداد جدار الحماية للوصول عبر الشبكة..."
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent

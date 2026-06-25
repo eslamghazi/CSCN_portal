@@ -12,25 +12,51 @@ function ServerTab() {
   useEffect(() => { api.get("/api/remote/server-info").then(setInfo).catch(() => {}); }, []);
   if (!info) return <div className="text-ink-muted">جاري التحميل...</div>;
 
+  const primaryUrl = (info.web_urls && info.web_urls[0]) || `http://${info.primary_ip}:${info.web_port}/`;
   const conn = `IP: ${info.primary_ip} | المنفذ: ${info.peer_port} | الرمز: ${info.token}`;
   async function firewall() {
     try { const r = await api.post("/api/remote/firewall"); r.success ? toast.success(r.message) : toast.error(r.message); }
     catch { toast.error("تعذّر طلب فتح المنفذ"); }
   }
   return (
-    <div className="max-w-xl space-y-3">
-      <p className="text-sm text-ink-secondary">شارك هذه البيانات مع الجهاز الآخر للاتصال بهذا الجهاز كمصدر للبيانات:</p>
-      <div className="rounded-lg border border-border bg-surface-alt p-4 text-sm">
-        <div className="mb-1"><span className="text-ink-muted">عنوان IP:</span> <span dir="ltr">{info.primary_ip}</span></div>
-        {info.ips.length > 1 && <div className="mb-1 text-xs text-ink-muted">عناوين أخرى: <span dir="ltr">{info.ips.slice(1).join(", ")}</span></div>}
-        <div className="mb-1"><span className="text-ink-muted">المنفذ:</span> <span dir="ltr">{info.peer_port}</span></div>
-        <div><span className="text-ink-muted">رمز الوصول:</span> <span dir="ltr">{info.token}</span></div>
+    <div className="max-w-2xl space-y-5">
+      {/* Browser access for other PCs on the LAN */}
+      <div>
+        <p className="mb-2 text-sm font-semibold text-ink">الدخول من أجهزة أخرى على الشبكة (عبر المتصفح):</p>
+        <p className="mb-2 text-sm text-ink-secondary">افتح أحد العناوين التالية من متصفح أي جهاز على نفس الشبكة:</p>
+        <div className="space-y-2">
+          {(info.web_urls || [primaryUrl]).map((u: string) => (
+            <div key={u} className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary-soft px-4 py-2.5">
+              <span dir="ltr" className="font-mono text-sm font-semibold text-primary">{u}</span>
+              <button className="icon-btn h-8 w-8" title="نسخ"
+                onClick={() => { navigator.clipboard.writeText(u); toast.success("تم النسخ"); }}>
+                <Icon name="documents" size={15} />
+              </button>
+            </div>
+          ))}
+        </div>
+        {info.is_windows && (
+          <button className="btn-secondary mt-3" onClick={firewall}>
+            <Icon name="admin" size={16} /> السماح عبر جدار الحماية (لتمكين الوصول من الشبكة)
+          </button>
+        )}
+        <p className="mt-2 text-xs text-ink-muted">
+          ملاحظة: يجب أن يكون الجهاز الآخر على نفس الشبكة المحلية، وأن يكون جدار الحماية يسمح بالمنفذ {info.web_port}.
+        </p>
       </div>
-      <div className="flex gap-2">
-        <button className="btn-secondary" onClick={() => { navigator.clipboard.writeText(conn); toast.success("تم النسخ"); }}>
-          <Icon name="documents" size={16} /> نسخ بيانات الاتصال
+
+      {/* Peer data-sync info */}
+      <div className="border-t border-border pt-4">
+        <p className="mb-2 text-sm font-semibold text-ink">بيانات مزامنة البيانات (للإدارة عن بُعد):</p>
+        <div className="rounded-lg border border-border bg-surface-alt p-4 text-sm">
+          <div className="mb-1"><span className="text-ink-muted">عنوان IP:</span> <span dir="ltr">{info.primary_ip}</span></div>
+          {info.ips.length > 1 && <div className="mb-1 text-xs text-ink-muted">عناوين أخرى: <span dir="ltr">{info.ips.slice(1).join(", ")}</span></div>}
+          <div className="mb-1"><span className="text-ink-muted">منفذ المزامنة:</span> <span dir="ltr">{info.peer_port}</span></div>
+          <div><span className="text-ink-muted">رمز الوصول:</span> <span dir="ltr">{info.token}</span></div>
+        </div>
+        <button className="btn-secondary mt-2" onClick={() => { navigator.clipboard.writeText(conn); toast.success("تم النسخ"); }}>
+          <Icon name="documents" size={16} /> نسخ بيانات المزامنة
         </button>
-        {info.is_windows && <button className="btn-secondary" onClick={firewall}><Icon name="admin" size={16} /> السماح عبر جدار الحماية</button>}
       </div>
     </div>
   );

@@ -14,6 +14,14 @@ from config.settings import DATA_DIR
 HOST = os.environ.get("CSCN_portal_HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("CSCN_portal_PORT", "8765"))
 
+
+def get_active_port() -> int:
+    """The port the server actually bound (set by the launcher), else the default."""
+    try:
+        return int(os.environ.get("CSCN_portal_ACTIVE_PORT", DEFAULT_PORT))
+    except (TypeError, ValueError):
+        return DEFAULT_PORT
+
 # Cookie lifetime (seconds). "Remember me" uses REMEMBER_MAX_AGE, otherwise a
 # shorter session lifetime.
 SESSION_MAX_AGE = 60 * 60 * 12          # 12 hours

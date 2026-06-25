@@ -106,6 +106,20 @@ def list_reports(user=Depends(require_login), services=Depends(get_services)):
             if _allowed(k, spec, user, services)]
 
 
+@router.get("/{key}/data")
+def report_data(key: str, user=Depends(require_login), services=Depends(get_services)):
+    """Return the report's title/headers/rows as JSON for on-screen preview."""
+    builders = _builders(services)
+    if key not in builders:
+        raise HTTPException(404, "تقرير غير معروف")
+    spec = builders[key]
+    if not _allowed(key, spec, user, services):
+        raise HTTPException(403, "ليس لديك صلاحية لهذا التقرير")
+    _label, _module, builder = spec
+    _module_name, title, headers, rows = builder()
+    return {"title": title, "headers": headers, "rows": rows, "count": len(rows)}
+
+
 @router.get("/{key}")
 def generate_report(key: str, fmt: str = "excel", user=Depends(require_login),
                     services=Depends(get_services)):

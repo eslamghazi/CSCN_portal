@@ -47,12 +47,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; One-dir build: ship the whole folder (exe + the _internal runtime) for fast
 ; startup (no per-launch unpacking).
 Source: "dist\CSCN\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Informational file listing the default login accounts.
-Source: "DEFAULT_LOGINS.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\بيانات الدخول الافتراضية"; Filename: "{app}\DEFAULT_LOGINS.txt"
 Name: "{group}\إزالة {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
