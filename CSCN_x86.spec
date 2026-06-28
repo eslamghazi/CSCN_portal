@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_submodules
 
-hiddenimports = ['uvicorn.loops.asyncio', 'uvicorn.protocols.http.h11_impl', 'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan.on', 'multipart', 'sqlalchemy.dialects.sqlite', 'pystray._win32', 'PIL.ImageDraw']
+hiddenimports = ['uvicorn.loops.asyncio', 'uvicorn.protocols.http.h11_impl', 'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan.on', 'multipart', 'sqlalchemy.dialects.sqlite']
 hiddenimports += collect_submodules('api')
 hiddenimports += collect_submodules('application')
 hiddenimports += collect_submodules('infrastructure')
@@ -9,7 +9,6 @@ hiddenimports += collect_submodules('domain')
 hiddenimports += collect_submodules('config')
 hiddenimports += collect_submodules('database')
 hiddenimports += collect_submodules('uvicorn')
-hiddenimports += collect_submodules('pystray')
 
 
 a = Analysis(

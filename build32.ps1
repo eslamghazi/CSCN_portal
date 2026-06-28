@@ -33,8 +33,8 @@ if (Test-Path ".env") { $envArgs = @("--add-data", ".env;.") }
 
 # Web build: entry is web_main.py; no Qt. Bundle the built SPA + the Arabic PDF
 # font. uvicorn submodules must be hidden-imported (dynamic imports).
-# --windowed: no console window; the app shows a system-tray icon instead
-# (see launcher.py). pystray's win32 backend is imported dynamically.
+# --windowed: no console window; the app shows a small Tkinter status window
+# instead (see launcher.py). Tkinter/Tcl-Tk are bundled automatically.
 & .\venv32\Scripts\python.exe -m PyInstaller --noconfirm --clean --onedir --noupx --windowed --name CSCN_x86 `
     --icon ui\resources\icons\app.ico `
     @envArgs `
@@ -48,15 +48,12 @@ if (Test-Path ".env") { $envArgs = @("--add-data", ".env;.") }
     --collect-submodules config `
     --collect-submodules database `
     --collect-submodules uvicorn `
-    --collect-submodules pystray `
     --hidden-import uvicorn.loops.asyncio `
     --hidden-import uvicorn.protocols.http.h11_impl `
     --hidden-import uvicorn.protocols.websockets.auto `
     --hidden-import uvicorn.lifespan.on `
     --hidden-import multipart `
     --hidden-import sqlalchemy.dialects.sqlite `
-    --hidden-import pystray._win32 `
-    --hidden-import PIL.ImageDraw `
     web_main.py
 
 $piExit = $LASTEXITCODE
